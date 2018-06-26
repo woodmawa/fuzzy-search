@@ -4,6 +4,7 @@ import info.debatty.java.stringsimilarity.Levenshtein
 
 class CompareSentence {
 
+    String[] targetList = []
     private String target
     List targetWords = []
     private String source
@@ -15,6 +16,8 @@ class CompareSentence {
     def setTarget (t) {
 
         def word
+        targetWords = [] //reset target words
+
         if (t.class != String & t.class != GString )
             throw new RuntimeException()
 
@@ -31,8 +34,19 @@ class CompareSentence {
         }
     }
 
+    def setTargetList (tl) {
+
+        def word
+
+        assert tl instanceof ArrayList<String>
+
+        this.targetList = tl.collect {it.toUpperCase()}
+    }
+
     def setSource (s) {
         def word
+        sourceWords = [] //reset
+
         if (s.class != String & s.class != GString )
             throw new RuntimeException()
 
@@ -58,17 +72,30 @@ class CompareSentence {
         def sSize = sourceWords.size()
         def tSize = targetWords.size()
         def max = Math.max(sSize,tSize)
+        double totalVariance = 0.0
 
-        results << max
+        results << [words:max]
         def shorterWords = (source.size() <= target.size()) ? sourceWords : targetWords
         def longerWords = shorterWords.is(sourceWords) ? targetWords : sourceWords
 
         for (int i = 0; i < max ; i++) {
+            def dist
+            double varComparedToSize
 
             def cword = (i >= Math.min(sSize,tSize)) ? "" : shorterWords[i]
-            results << levenshtein.distance(longerWords[i], cword  )
+            dist = levenshtein.distance(longerWords[i], cword  )
+            varComparedToSize = dist/cword.size()
+            totalVariance += varComparedToSize
+            results  << [dist:dist]  << [sVar:varComparedToSize]
 
         }
+        results << [averageVar:(totalVariance/max)]  //not a good measure !
+    }
+
+    def similarityToList () {
+        def results = []
+
+        results =  targetList.collect {target = it;   similarity()}
         results
     }
 }

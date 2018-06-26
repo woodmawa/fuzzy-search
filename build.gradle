@@ -22,4 +22,13 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     // https://mvnrepository.com/artifact/org.spockframework/spock-core
     testCompile group: 'org.spockframework', name: 'spock-core', version: '1.1-groovy-2.4'
+
+    // https://mvnrepository.com/artifact/org.grails/grails-async-gpars
+    compile group: 'org.grails', name: 'grails-async-gpars', version: '3.3.2'
+
+    //get logback for logging used by the grails async library
+    //transitively gets SLF4J library
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+
+    //runtime 'org.grails.plugins:async:3.3.2'
 }
