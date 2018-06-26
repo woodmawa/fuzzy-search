@@ -72,12 +72,12 @@ def thingRes = ats.findThings ("AA").onComplete {List thingsList -> println "asy
 thingRes.get()
 
 /**
- * gpars :  dataflow queues
+ * gpars :  dataflow queues, demonstrating many to 1
  *
  */
 
 def words = ["on", "a", "good", "day", "live", "is", "good"]
-
+def words2 = ["Gandalf", "is", "bad"]
 DataflowQueue queue = new DataflowQueue()
 
 GparsPromise t1 = task {
@@ -88,7 +88,15 @@ GparsPromise t1 = task {
     "done"
 }
 
-def t2 = task {
+GparsPromise t2 = task {
+    for (word in words2) {
+        //add word to queue from second list
+        queue << word.toUpperCase()
+    }
+    "done"
+}
+
+def t3 = task {
     println "read word from queue"
     while (true) println queue.val  //read from queue in loop
 }
@@ -99,3 +107,4 @@ def len = queue.length()*/
 //queue.whenBound { println "queue val  $it"}
 
 assert t1.get() == "done"
+assert t2.get() == "done"
