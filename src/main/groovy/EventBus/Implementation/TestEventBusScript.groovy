@@ -19,9 +19,11 @@ EventBus eb = new EventBus()
 eb.addSubscriber("any.event", subs)
 
 eb.start()
-eb.notifyMessage "any.event", "hellooo"
-//eb.notifyMessage "any.event", EventBusProcessor.STOP
+eb.notifyEvent "any.event", "hellooo"
+/*sleep (600)
+eb.notifyMessage "any.event", EventBusProcessor.STOP*/
 
+sleep (600)
 
 eb.stop()
 

@@ -34,7 +34,6 @@ enum EventBusStatus {
 }
 
 @Slf4j
-@ActiveObject
 class EventBus {
 
     /**
@@ -51,7 +50,7 @@ class EventBus {
 
     Promise eventProcessor
 
-    void notifyMessage (String topic, def message) {
+    void notifyEvent (String topic, def message) {
         //do as async task
         task {
             eventId.send  {updateValue it + 1}  //increment message counter
@@ -62,24 +61,28 @@ class EventBus {
 
     void addSubscriber (String topic, def subscriberInstance ) {
         //see if path string already registered as key
-        def subscribers = messagePathSubscribers.get(topic)
+        List subscribers = messagePathSubscribers.get(topic)
         if (!subscribers) {
+            log.debug "addSubscriber: adding first subscriber on topic : $topic"
             messagePathSubscribers.putIfAbsent(topic, [subscriberInstance])
         }
         else {
             if (!subscribers.contains(subscriberInstance)) {
+                log.debug "addSubscriber: adding another subscriber to topic : $topic"
+
                 subscribers << subscriberInstance
+                messagePathSubscribers.put(topic, subscribers)
             }
 
-             messagePathSubscribers.put(topic, subscribers)
         }
 
     }
 
     void removeSubscriber (String topic, def subscriberInstance) {
-        def subscribers = messagePathSubscribers.get(topic)
+        List subscribers = messagePathSubscribers.get(topic)
         if (subscribers) {
             List reducedSubscribersList = subscribers.stream().filter {!(it.is(subscriberInstance))}.collect(Collectors.toList());
+            log.debug "removeSubscriber: removed subscriber to topic : $topic, remaining subscribers : $reducedSubscribersList"
 
             //is same list or another - do i n3eed to resave to map?
             messagePathSubscribers.put(topic, reducedSubscribersList)
@@ -87,21 +90,17 @@ class EventBus {
     }
 
     void clearAllSubscribers (String topic) {
+        log.debug "clearAllSubscriber: removed all subscriber to topic : $topic"
+
         messagePathSubscribers.put(topic, [])
     }
 
 
     //private method to deliver the message to subscribers
-    //@ActiveMethod
     private void  processMessage (String topic, message) {
         assert topic
         def subscriberList = messagePathSubscribers[topic]
 
-        log.debug "processing message for topic $topic "
-        /*subscriberList.each {
-            boolean ans = it.respondsTo("onMessage")
-            if (it.respondsTo("onMessage"))
-                it.onMessage (topic, message)} */
         Closure dispatchMessage = {subscriber ->
             boolean ans = subscriber.respondsTo("onMessage")
             if (subscriber.respondsTo("onMessage" )) {
@@ -137,13 +136,14 @@ class EventBus {
                     if (message == EventBusProcessor.STOP) {
                         status.send {updateValue it =  EventBusStatus.STOPPING}
                         done.set(true)
+                        log.debug "start : in event loop, EventBus processor saw STOP message , EventBus now : $status.val "
                         break
                     }
                 }
                 processMessage (topic, message)
             }
             status.send {updateValue it =  EventBusStatus.STOPPED}
-            log.debug "start: event bus processor now stopped, state : $status.val , done flag is : ${done.get()}"
+            log.debug "start: EventBus processor now stopped, state : $status.val , done flag is : ${done.get()}"
             return status.val
         }
     }
@@ -152,19 +152,22 @@ class EventBus {
         //will step even if there messages left in queue to process
         //seems to need this long for start task to kick in and start processing
         // if go earlier done flag gets set before a chance to read the queue - so delay added
-        sleep (500)
-        def t = task {
+        //sleep (500)
+        /*def t = task {
             done.set(true)
             status.send {updateValue it =  EventBusStatus.STOPPING}
             log.debug "stopTask completed,  returning status : $status.val"
             status.val
-        }
+        }*/
+            log.debug "stop method main thread: sending STOP message to queue "
+            notifyEvent("eventBus.stop", EventBusProcessor.STOP)
 
         //wait till task stops
-        //t.then {println "stop method main thread: set done flag to : ${done.get()} status: $it"}
-        //eventProcessor.then {println "eventProcessor task: stopped processing queue, status : $it"}
-        [t,eventProcessor]*.join()
-        log.debug "stop method main thread:: stopping the processor, remaining messages in queue ${inMessageQueue.length()} "
+        //stopTask.then {println "-> stop method main thread: set done flag to : ${done.get()} status: $it"}
+        eventProcessor.then {println "-> eventProcessor task: stopped processing queue, status : $it"}
+        //[stopTask,eventProcessor]*.join()
+        eventProcessor.join()
+        log.debug "stop method main thread: stopping the processor, remaining messages in queue ${inMessageQueue.length()} "
 
     }
 }
