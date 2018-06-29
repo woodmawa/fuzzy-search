@@ -29,6 +29,7 @@ dependencies {
     //get logback for logging used by the grails async library
     //transitively gets SLF4J library
     compile 'ch.qos.logback:logback-classic:1.2.3'
+    compile group: 'com.fasterxml.uuid', name: 'java-uuid-generator', version: '3.1.5'
 
     //runtime 'org.grails.plugins:async:3.3.2'
 }

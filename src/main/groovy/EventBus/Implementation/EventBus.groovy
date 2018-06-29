@@ -1,5 +1,7 @@
 package EventBus.Implementation
 
+import com.fasterxml.uuid.Generators
+import com.fasterxml.uuid.NoArgGenerator
 import groovy.util.logging.Log
 import groovy.util.logging.Log4j
 import groovy.util.logging.Log4j2
@@ -11,6 +13,7 @@ import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.Promise
 
+import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.stream.Collectors
@@ -45,18 +48,26 @@ class EventBus {
 
     Agent status = new Agent (EventBusStatus.STOPPED)
 
-    Agent eventId = new Agent (0L)
+    Agent eventId = new Agent ()
     final done = new AtomicBoolean()  //defaults to false
 
     Promise eventProcessor
+    NoArgGenerator timeBasedGenerator = Generators.timeBasedGenerator()
+
 
     void notifyEvent (String topic, def message) {
         //do as async task
-        task {
-            eventId.send  {updateValue it + 1}  //increment message counter
+        //task {
+            UUID tuid = timeBasedGenerator.generate()
+
+            Date etime = new Date (tuid.timestamp())
+            log.debug "notifyEvent: -> message time from uid $tuid was " +etime
+
+            eventId.send  {updateValue it = tuid}  //set the eventId as time based guid
             //add message to queue with unique id and array of topic and message
             inMessageQueue << [eventId.val, [topic,message] ]
-        }
+
+        //}
     }
 
     void addSubscriber (String topic, def subscriberInstance ) {
@@ -127,10 +138,10 @@ class EventBus {
             status.send {updateValue it =  EventBusStatus.RUNNING}
 
             while (!done.get()) {
-                List event = inMessageQueue.val
-                def eventNum = event [0]
-                def topic = event[1][0]
-                def message = event[1][1]
+                List eventRecord = inMessageQueue.val
+                UUID eventId = eventRecord [0]
+                def topic = eventRecord[1][0]
+                def message = eventRecord[1][1]
 
                 if (message.class == EventBusProcessor) {
                     if (message == EventBusProcessor.STOP) {
