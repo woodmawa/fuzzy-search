@@ -53,6 +53,7 @@ class EventBus {
 
     Promise eventProcessor
     NoArgGenerator timeBasedGenerator = Generators.timeBasedGenerator()
+    private static final long START_EPOCH = -12219292800000L;
 
 
     void notifyEvent (String topic, def message) {
@@ -60,7 +61,7 @@ class EventBus {
         //task {
             UUID tuid = timeBasedGenerator.generate()
 
-            Date etime = new Date (tuid.timestamp())
+            Date etime = new Date ((tuid.timestamp()/1000 + START_EPOCH) as Long)
             log.debug "notifyEvent: -> message time from uid $tuid was " +etime
 
             eventId.send  {updateValue it = tuid}  //set the eventId as time based guid
