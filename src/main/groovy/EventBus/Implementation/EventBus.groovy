@@ -13,6 +13,8 @@ import groovyx.gpars.agent.Agent
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.Promise
 
+import java.sql.Timestamp
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -60,9 +62,12 @@ class EventBus {
         //do as async task
         //task {
             UUID tuid = timeBasedGenerator.generate()
+            Long t = tuid.timestamp()
+            Timestamp timestamp = new Timestamp (t)//new Timestamp ((tuid.timestamp()/1000) as Long)
+            Date dateTime = new Date (timestamp.getTime())
 
-            Date etime = new Date ((tuid.timestamp()/1000 + START_EPOCH) as Long)
-            log.debug "notifyEvent: -> message time from uid $tuid was " +etime
+            //Date etime = new Date ((tuid.timestamp()/1000 + START_EPOCH) as Long)
+            log.debug "notifyEvent: -> message time from uid $tuid was " + dateTime
 
             eventId.send  {updateValue it = tuid}  //set the eventId as time based guid
             //add message to queue with unique id and array of topic and message
